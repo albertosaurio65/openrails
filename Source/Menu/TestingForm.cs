@@ -25,12 +25,13 @@ using System.Linq;
 using System.Windows.Forms;
 using GNU.Gettext;
 using GNU.Gettext.WinForms;
+using ORTS.Common;
 using ORTS.Menu;
 using ORTS.Settings;
 using Activity = ORTS.Menu.Activity;
 using Path = System.IO.Path;
 
-namespace ORTS
+namespace Menu
 {
     public partial class TestingForm : Form
     {
@@ -186,7 +187,7 @@ namespace ORTS
                 var processStartInfo = new ProcessStartInfo();
                 processStartInfo.FileName = MainForm.RunActivityProgram;
                 processStartInfo.WindowStyle = ProcessWindowStyle.Normal;
-                processStartInfo.WorkingDirectory = Application.StartupPath;
+                processStartInfo.WorkingDirectory = ApplicationInfo.ProcessDirectory;
 
                 if (!ClearedLogs)
                 {

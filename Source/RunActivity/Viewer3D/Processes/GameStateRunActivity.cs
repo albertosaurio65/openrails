@@ -281,8 +281,10 @@ namespace Orts.Viewer3D.Processes
                                 String.Join("\n", data.Select(d => "\u2022 " + d).ToArray())),
                                 Application.ProductName + " " + VersionInfo.VersionOrBuild, MessageBoxButtons.OK, MessageBoxIcon.Error);
                         else if (error is Traveller.MissingTrackNodeException)
-                            MessageBox.Show(String.Format("Open Rails detected a track section which is not present in tsection.dat and cannot continue.\n\n" +
-                                "Most likely you don't have the XTracks or Ytracks version needed for this route."));
+                            MessageBox.Show(String.Format("Open Rails detected a track shape index {0} which is not present in tsection.dat and cannot continue.\n\n" +
+                                "The version of standard tsection.dat may be out of date, or this route requires a custom tsection.dat.\n" +
+                                "Please check the route installation instructions to verify the required tsection.dat.",
+                                ((Traveller.MissingTrackNodeException)error).Index));
                         else if (error is FileNotFoundException)
                         {
                             MessageBox.Show(String.Format(
@@ -428,6 +430,8 @@ namespace Orts.Viewer3D.Processes
                 outf.Write(outf.BaseStream.Position);
             }
 
+            LogLocation();
+
             // Having written .save file, write other files: .replay, .txt, .evaluation.txt
 
             // The Save command is the only command that doesn't take any action. It just serves as a marker.
@@ -441,6 +445,20 @@ namespace Orts.Viewer3D.Processes
             if (File.Exists(Program.EvaluationFilename))
                 File.Copy(Program.EvaluationFilename, Path.Combine(UserSettings.UserDataFolder, saveSet.FileStem + ".evaluation.txt"), true); 
         }
+
+
+        /// <summary>
+        /// Append time and location to the log for potential use in an ACT file. E.g.:
+        /// "Location ( -6112 15146 78.15 -672.81 10 )"
+        /// </summary>
+        private static void LogLocation()
+        {
+            var t = Simulator.Trains[0].FrontTDBTraveller;
+            var location = $"Location ( {t.TileX} {t.TileZ} {t.X:F2} {t.Z:F2}";
+            location += $" 10 )"; // Matches location if within this 10 meter radius
+            var clockTime = FormatStrings.FormatTime(Simulator.ClockTime);
+            Console.WriteLine($"\nSave after {(int)Simulator.GameTime} secs at {clockTime}, EventCategoryLocation = {location}");
+        }        
 
         private static void SaveEvaluation(BinaryWriter outf)
         {
@@ -820,7 +838,7 @@ namespace Orts.Viewer3D.Processes
                 Console.WriteLine("Build      = {0}", VersionInfo.Build);
                 if (logFileName.Length > 0)
                     Console.WriteLine("Logfile    = {0}", logFileName);
-                Console.WriteLine("Executable = {0}", Path.GetFileName(Application.ExecutablePath));
+                Console.WriteLine("Executable = {0}", Path.GetFileName(ApplicationInfo.ProcessFile));
                 foreach (var arg in args)
                     Console.WriteLine("Argument   = {0}", arg);
 
@@ -1129,6 +1147,7 @@ namespace Orts.Viewer3D.Processes
                         // for resume and replay : set timetable file and selected train info
                         Simulator.TimetableFileName = System.IO.Path.GetFileNameWithoutExtension(args[0]);
                         Simulator.PathName = args[1];
+                        Simulator.IsAutopilotMode = true;
                     }
                     break;
             }
@@ -1147,7 +1166,7 @@ namespace Orts.Viewer3D.Processes
                 catch (Exception error)
                 {
                     Trace.WriteLine(error);
-                    Console.WriteLine("Connection error - will play in single mode.");
+                    Trace.TraceWarning("Connection error - will play in single mode.");
                     Server = null;
                 }
             }
@@ -1166,7 +1185,7 @@ namespace Orts.Viewer3D.Processes
                 catch (Exception error)
                 {
                     Trace.WriteLine(error);
-                    Console.WriteLine("Connection error - will play in single mode.");
+                    Trace.TraceWarning("Connection error - will play in single mode.");
                     Client = null;
                 }
             }

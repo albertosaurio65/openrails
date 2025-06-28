@@ -279,9 +279,9 @@ namespace Orts.Viewer3D
         {
             if (SharedShape.Matrices.Length > 0)
             {
-            XNAMatrices = new Matrix[SharedShape.Matrices.Length];
-            for (int iMatrix = 0; iMatrix < SharedShape.Matrices.Length; ++iMatrix)
-                XNAMatrices[iMatrix] = SharedShape.Matrices[iMatrix];
+                XNAMatrices = new Matrix[SharedShape.Matrices.Length];
+                for (int iMatrix = 0; iMatrix < SharedShape.Matrices.Length; ++iMatrix)
+                    XNAMatrices[iMatrix] = SharedShape.Matrices[iMatrix];
             }
             else // If the shape file is missing or fails to load, we need some default data to prevent crashes
             {
@@ -1807,6 +1807,11 @@ namespace Orts.Viewer3D
             }
         }
 
+        public void SetMaterial(Material material)
+        {
+            Material = material;
+        }
+
         [CallOnThread("Loader")]
         public virtual void Mark()
         {
@@ -1848,11 +1853,6 @@ namespace Orts.Viewer3D
         public void SetIndexData(short[] data)
         {
             IndexBuffer.SetData(data);
-        }
-
-        public void SetMaterial(Material material)
-        {
-            Material = material;
         }
     }
 
@@ -1976,6 +1976,11 @@ namespace Orts.Viewer3D
         public string SoundFileName = "";
         public float CustomAnimationFPS = 8;
 
+        /// <summary>
+        /// Store for matrixes needed to be reused in later calculations, e.g. for 3d cabview mouse control
+        /// </summary>
+        public readonly Dictionary<int, Matrix> StoredResultMatrixes = new Dictionary<int, Matrix>();
+
 
         readonly Viewer Viewer;
         public readonly string FilePath;
@@ -2015,7 +2020,6 @@ namespace Orts.Viewer3D
         /// </summary>
         void LoadContent()
         {
-            Trace.Write("S");
             var filePath = FilePath;
             // commented lines allow reading the animation block from an additional file in an Openrails subfolder
 //           string dir = Path.GetDirectoryName(filePath);
@@ -2303,12 +2307,7 @@ namespace Orts.Viewer3D
                         if (String.IsNullOrEmpty(sharedShape.ReferencePath))
                             material = sharedShape.Viewer.MaterialManager.Load("Scenery", Helpers.GetRouteTextureFile(sharedShape.Viewer.Simulator, textureFlags, imageName), (int)options, texture.MipMapLODBias);
                         else
-                        {
-                            if (imageName.ToUpper().Contains(nameof(CABViewControlTypes.ORTS_ETCS)))
-                                material = sharedShape.Viewer.MaterialManager.Load("Screen", Helpers.GetTextureFile(sharedShape.Viewer.Simulator, Helpers.TextureFlags.None, sharedShape.ReferencePath, imageName));
-                            else
-                                material = sharedShape.Viewer.MaterialManager.Load("Scenery", Helpers.GetTextureFile(sharedShape.Viewer.Simulator, textureFlags, sharedShape.ReferencePath, imageName), (int)options, texture.MipMapLODBias);
-                        }
+                            material = sharedShape.Viewer.MaterialManager.Load("Scenery", Helpers.GetTextureFile(sharedShape.Viewer.Simulator, textureFlags, sharedShape.ReferencePath, imageName), (int)options, texture.MipMapLODBias);
                     }
                     else
                     {
@@ -2615,6 +2614,9 @@ namespace Orts.Viewer3D
                             hi = shapePrimitive.Hierarchy[hi];
                         }
                         Matrix.Multiply(ref xnaMatrix, ref xnaDTileTranslation, out xnaMatrix);
+
+                        if (StoredResultMatrixes.ContainsKey(shapePrimitive.HierarchyIndex))
+                            StoredResultMatrixes[shapePrimitive.HierarchyIndex] = xnaMatrix;
 
                         // TODO make shadows depend on shape overrides
 

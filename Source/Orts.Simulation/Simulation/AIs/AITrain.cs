@@ -72,8 +72,8 @@ namespace Orts.Simulation.AIs
         public Service_Definition ServiceDefinition = null; // train's service definition in .act file
         public bool UncondAttach = false;                   // if false it states that train will unconditionally attach to a train on its path
 
-        public float doorOpenDelay = -1f;
-        public float doorCloseAdvance = -1f;
+        public float DoorOpenTimer = -1f;
+        public float DoorCloseTimer = -1f;
         public AILevelCrossingHornPattern LevelCrossingHornPattern { get; set; }
         public bool ApproachTriggerSet = false;         // station approach trigger for AI trains has been set
 
@@ -245,10 +245,10 @@ namespace Orts.Simulation.AIs
             Efficiency = inf.ReadSingle();
             MaxVelocityA = inf.ReadSingle();
             UncondAttach = inf.ReadBoolean();
-            doorCloseAdvance = inf.ReadSingle();
-            doorOpenDelay = inf.ReadSingle();
-			ApproachTriggerSet = inf.ReadBoolean();
-            if (!Simulator.TimetableMode && doorOpenDelay <= 0 && doorCloseAdvance > 0 && Simulator.OpenDoorsInAITrains &&
+            DoorCloseTimer = inf.ReadSingle();
+            DoorOpenTimer = inf.ReadSingle();
+            ApproachTriggerSet = inf.ReadBoolean();
+            if (!Simulator.TimetableMode && DoorOpenTimer <= 0 && DoorCloseTimer > 0 && Simulator.OpenDoorsInAITrains &&
                 MovementState == AI_MOVEMENT_STATE.STATION_STOP && StationStops.Count > 0)
             {
                 StationStop thisStation = StationStops[0];
@@ -339,8 +339,8 @@ namespace Orts.Simulation.AIs
             outf.Write(Efficiency);
             outf.Write(MaxVelocityA);
             outf.Write(UncondAttach);
-            outf.Write(doorCloseAdvance);
-            outf.Write(doorOpenDelay);
+            outf.Write(DoorCloseTimer);
+            outf.Write(DoorOpenTimer);
             outf.Write(ApproachTriggerSet);
             if (LevelCrossingHornPattern != null)
             {
@@ -378,8 +378,8 @@ namespace Orts.Simulation.AIs
                 float initialThrottlepercent = InitialThrottlepercent;
                 MUDynamicBrakePercent = -1;
                 AITrainBrakePercent = 0;
-
-                FirstCar.CurrentElevationPercent = 100f * FirstCar.WorldPosition.XNAMatrix.M32;
+                // Force calculate gradient at the front of the train
+                FirstCar.UpdateGravity();
                 // Give it a bit more gas if it is uphill
                 if (FirstCar.CurrentElevationPercent < -2.0) initialThrottlepercent = 40f;
                 // Better block gas if it is downhill
@@ -1855,13 +1855,12 @@ namespace Orts.Simulation.AIs
                     thisStation.ActualArrival = presentTime;
                     var stopTime = thisStation.CalculateDepartTime(presentTime, this);
                     actualdepart = thisStation.ActualDepart;
-                    doorOpenDelay = 4.0f;
-                    doorCloseAdvance = stopTime - 10.0f;
-                    if (PreUpdate) doorCloseAdvance -= 10;
-                    if (doorCloseAdvance - 6 < doorOpenDelay)
+                    DoorOpenTimer = PreUpdate ? 0 : 4;
+                    DoorCloseTimer = PreUpdate ? stopTime - 20 : stopTime - 10.0f;
+                    if (DoorCloseTimer - 6 < DoorOpenTimer)
                     {
-                        doorOpenDelay = 0;
-                        doorCloseAdvance = stopTime - 3;
+                        DoorOpenTimer = 0;
+                        DoorCloseTimer = Math.Max (stopTime - 3, 0);
                     }
 
 #if DEBUG_REPORTS
@@ -1891,10 +1890,10 @@ namespace Orts.Simulation.AIs
                     if (!IsFreight && Simulator.OpenDoorsInAITrains)
                     {
                         var frontIsFront = thisStation.PlatformReference == thisStation.PlatformItem.PlatformFrontUiD;
-                        if (doorOpenDelay > 0)
+                        if (DoorOpenTimer >= 0)
                         {
-                            doorOpenDelay -= elapsedClockSeconds;
-                            if (doorOpenDelay < 0)
+                            DoorOpenTimer -= elapsedClockSeconds;
+                            if (DoorOpenTimer < 0)
                             {
                                 if (thisStation.PlatformItem.PlatformSide[0])
                                 {
@@ -1908,19 +1907,19 @@ namespace Orts.Simulation.AIs
                                 }
                             }
                         }
-                        if (doorCloseAdvance > 0)
+                        if (DoorCloseTimer >= 0)
                         {
-                            doorCloseAdvance -= elapsedClockSeconds;
-                            if (doorCloseAdvance < 0)
+                            DoorCloseTimer -= elapsedClockSeconds;
+                            if (DoorCloseTimer < 0)
                             {
                                 if (thisStation.PlatformItem.PlatformSide[0])
                                 {
-                                    // Open left doors
+                                    // Close left doors
                                     SetDoors(frontIsFront ? DoorSide.Right : DoorSide.Left, false);
                                 }
                                 if (thisStation.PlatformItem.PlatformSide[1])
                                 {
-                                    // Open right doors
+                                    // Close right doors
                                     SetDoors(frontIsFront ? DoorSide.Left : DoorSide.Right, false);
                                 }
                             }
@@ -1995,7 +1994,10 @@ namespace Orts.Simulation.AIs
 
             // Depart
             thisStation.Passed = true;
-            Delay = TimeSpan.FromSeconds((presentTime - thisStation.DepartTime) % (24 * 3600));
+            if (thisStation.ArrivalTime >= 0)
+            {
+                Delay = TimeSpan.FromSeconds((presentTime - thisStation.DepartTime) % (24 * 3600));
+            }
             PreviousStop = thisStation.CreateCopy();
 
             if (thisStation.ActualStopType == StationStop.STOPTYPE.STATION_STOP
@@ -2061,7 +2063,6 @@ namespace Orts.Simulation.AIs
                     MovementState = AI_MOVEMENT_STATE.STOPPED_EXISTING;
                     if (TrainType != TRAINTYPE.AI_PLAYERHOSTING) AtStation = false;
                 }
-
                 Delay = TimeSpan.FromSeconds((presentTime - thisStation.DepartTime) % (24 * 3600));
             }
             if (Cars[0] is MSTSLocomotive) Cars[0].SignalEvent(Event.AITrainLeavingStation);
@@ -3657,7 +3658,7 @@ namespace Orts.Simulation.AIs
             }
         }
 
-        public void AdjustControlsAccelMore(float reqAccelMpSS, float timeS, int stepSize)
+        public virtual void AdjustControlsAccelMore(float reqAccelMpSS, float timeS, int stepSize)
         {
             if (AITrainBrakePercent > 0)
             {
@@ -4380,7 +4381,8 @@ namespace Orts.Simulation.AIs
                     AI.AITrains.Add(this);
                     AI.aiListChanged = true;
                 }
-                else if (attachTrain is AITrain) RedefineAITriggers(attachTrain as AITrain);
+                else 
+                    attachTrain.RedefineSoundTriggers();
                 if (!UncondAttach)
                 {
                     RemoveTrain();
@@ -4489,7 +4491,7 @@ namespace Orts.Simulation.AIs
             AddTrackSections();
             ResetActions(true);
             physicsUpdate(0);
-            RedefineAITriggers(this);
+            RedefineSoundTriggers();
         }
 
         //================================================================================================//
@@ -4731,8 +4733,8 @@ namespace Orts.Simulation.AIs
             // Move WP, if any, just under the loco;
             AuxActionsContain.MoveAuxActionAfterReversal(this);
             ResetActions(true);
-            RedefineAITriggers(this);
-            if (attachTrain is AITrain) RedefineAITriggers(attachTrain as AITrain);
+            RedefineSoundTriggers();
+            attachTrain.RedefineSoundTriggers();
             physicsUpdate(0);// Stop the wheels from moving etc
 
         }
@@ -6590,27 +6592,6 @@ namespace Orts.Simulation.AIs
                     }
                     if (AuxActionsContain.SpecAuxActions.Count > 1 && AuxActionsContain.SpecAuxActions[1] is AIActSigDelegateRef)
                         (AuxActionsContain.SpecAuxActions[1] as AIActSigDelegateRef).Delay = delay;
-                }
-            }
-        }
-
-        //================================================================================================//
-        /// <summary>
-        /// Redefine sound triggers for AI trains
-        /// </summary>
-        public void RedefineAITriggers(AITrain train)
-        {
-            var leadFound = false;
-            foreach (var car in train.Cars)
-            {
-                if (car is MSTSLocomotive)
-                {
-                    if (!leadFound)
-                    {
-                        car.SignalEvent(Event.AITrainLeadLoco);
-                        leadFound = true;
-                    }
-                    else car.SignalEvent(Event.AITrainHelperLoco);
                 }
             }
         }

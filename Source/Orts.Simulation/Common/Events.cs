@@ -31,6 +31,10 @@ namespace Orts.Common
         AITrainHelperLoco,
         AITrainLeadLoco,
         AITrainLeavingStation,
+        PlayerTrainHelperLoco,
+        PlayerTrainLeadLoco,
+        StaticTrainLoco,
+        EndAITrainLeadLoco,
         BatterySwitchOff,
         BatterySwitchOn,
         BatterySwitchCommandOff,
@@ -127,10 +131,12 @@ namespace Orts.Common
         PermissionDenied,
         PermissionGranted,
         PermissionToDepart,
-        PlayerTrainHelperLoco,
-        PlayerTrainLeadLoco,
-        PowerKeyOff,
-        PowerKeyOn,
+        VoltageSelectorDecrease,
+        VoltageSelectorIncrease,
+        PantographSelectorDecrease,
+        PantographSelectorIncrease,
+        PowerLimitationSelectorDecrease,
+        PowerLimitationSelectorIncrease,
         ReverserChange,
         ReverserToForwardBackward,
         ReverserToNeutral,
@@ -281,6 +287,9 @@ namespace Orts.Common
         CruiseControlMaxForce,
         CruiseControlAlert,
         CruiseControlAlert1,
+
+        // request stop
+        RequestStopAnnounce,
 
         MPCChangePosition,
 
@@ -548,10 +557,19 @@ namespace Orts.Common
                         case 251: return Event.OverchargeBrakingOff;
                         case 252: return Event.EmergencyVentValveOn;
 
+                        case 253: return Event.VoltageSelectorDecrease;
+                        case 254: return Event.VoltageSelectorIncrease;
+                        case 255: return Event.PantographSelectorDecrease;
+                        case 256: return Event.PantographSelectorIncrease;
+                        case 257: return Event.PowerLimitationSelectorDecrease;
+                        case 258: return Event.PowerLimitationSelectorIncrease;
+
                         case 260: return Event.WindowClosing;
                         case 261: return Event.WindowOpening;
                         case 262: return Event.WindowsClosed;
                         case 263: return Event.WindowsOpen;
+
+                        case 270: return Event.RequestStopAnnounce;
 
                         // Cruise Control
                         case 298: return Event.LeverFromZero;
@@ -574,6 +592,8 @@ namespace Orts.Common
                         case 333: return Event.PlayerTrainHelperLoco;
                         case 334: return Event.AITrainApproachingStation;
                         case 335: return Event.AITrainLeavingStation;
+                        case 336: return Event.StaticTrainLoco;
+                        case 337: return Event.EndAITrainLeadLoco;
 						
                         default: return 0;
                     }

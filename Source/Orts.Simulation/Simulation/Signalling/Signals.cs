@@ -101,7 +101,6 @@ namespace Orts.Simulation.Signalling
             tdbfile = Simulator.TDB;
 
             // read SIGSCR files
-            Trace.Write(" SIGSCR ");
             scrfile = new SIGSCRfile(new SignalScripts(sigcfg.ScriptPath, sigcfg.ScriptFiles, sigcfg.SignalTypes, sigcfg.SignalFunctions, sigcfg.ORTSNormalSubtypes));
             CsSignalScripts = new CsSignalScripts(Simulator);
 
@@ -423,7 +422,6 @@ namespace Orts.Simulation.Signalling
 
                 // read w-file, get SignalObjects only
 
-                Trace.Write("W");
                 WorldFile WFile;
                 try
                 {
@@ -446,23 +444,26 @@ namespace Orts.Simulation.Signalling
 
                         //check if signalheads are on same or adjacent tile as signal itself - otherwise there is an invalid match
                         uint? BadSignal = null;
+                        string badSignalMsg = "";
                         foreach (var si in thisWorldObject.SignalUnits.Units)
                         {
                             if (this.trackDB.TrItemTable == null || si.TrItem >= this.trackDB.TrItemTable.Count())
                             {
                                 BadSignal = si.TrItem;
+                                badSignalMsg = "not present in .tdb file";
                                 break;
                             }
                             var item = this.trackDB.TrItemTable[si.TrItem];
                             if (Math.Abs(item.TileX - WFile.TileX) > 1 || Math.Abs(item.TileZ - WFile.TileZ) > 1)
                             {
                                 BadSignal = si.TrItem;
+                                badSignalMsg = String.Format("not matching .tdb tile location {0} {1}", item.TileX, item.TileZ);
                                 break;
                             }
                         }
                         if (BadSignal.HasValue)
                         {
-                            Trace.TraceWarning("Signal referenced in .w file {0} {1} as TrItem {2} not present in .tdb file ", WFile.TileX, WFile.TileZ, BadSignal.Value);
+                            Trace.TraceWarning("Signal referenced in .w file {0} {1} as TrItem {2} {3} ", WFile.TileX, WFile.TileZ, BadSignal.Value, badSignalMsg);
                             continue;
                         }
 
@@ -567,8 +568,10 @@ namespace Orts.Simulation.Signalling
 
             if (foundSignals > 0)
             {
-                // loop through all signals
-                // update required part
+                // loop through all the signals, but only one batch of signals with every call to this method.
+                // update one batch of signals. Batch ends when time taken exceeds 1/20th of time for all signals.
+                // Processing 1/20th of signals in each batch gave a jerky result as processing time varies greatly.
+                // Smoother results now that equal time is given to each batch and let the batch size vary.
                 var updates = 0;
                 var updateStep = 0;
                 var targetTicks = Stopwatch.GetTimestamp() + UpdateTickTarget;
@@ -3922,7 +3925,7 @@ namespace Orts.Simulation.Signalling
                     }
                     else
                     {
-                        for (int iObject = 0; iObject < thisItemList.Count - 1 && !endOfRoute; iObject++)
+                        for (int iObject = 0; iObject < thisItemList.Count && !endOfRoute; iObject++)
                         {
                             TrackCircuitSignalItem thisItem = thisItemList[iObject];
 

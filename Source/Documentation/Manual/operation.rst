@@ -614,7 +614,7 @@ AE in the .srv file as "Efficiency".
 
 If the AI train makes station stops, its maxspeed depends from the "Performance" 
 parameter for every route section, as can be seen and defined in the AI train 
-timetable (that is maxspeed is the product of the first MAxVelocity parameter by 
+timetable (that is maxspeed is the product of the first MaxVelocity parameter by 
 the "Performance" parameter divided by 100).
 
 Such performance parameter list is written (divided by 100) by the AE in 
@@ -632,6 +632,8 @@ This corresponds to MSTS behaviour.
 Moreover the Efficiency parameter is used also to compute acceleration and 
 braking curves.
 
+.. _operation-speed:
+
 Calculation of Train Speed Limit
 --------------------------------
 
@@ -641,7 +643,7 @@ Calculation of Train Speed Limit
   - local signal speed limit
   - local speedpost speed limit
   - local temporary speedpost speed limit
-  - first parameter ``MaxVelocityA`` in ``.con`` file, if bigger than zero and not 
+  - first parameter of ``MaxVelocity`` line in ``.con`` file, if bigger than zero and not 
     equal 40
   - locomotive speed limit in ``.eng`` file in the other cases. 
 
@@ -651,17 +653,10 @@ Calculation of Train Speed Limit
   - local signal speed limit
   - local speedpost speed limit
   - local temporary speedpost speed limit
-  - first parameter ``MaxVelocityA`` in ``.con`` file, if bigger than zero and not 
-    equal 40
+  - first parameter of ``MaxVelocity`` line in ``.con`` file, if bigger than zero and not 
+    equal 40, multiplied by the Efficiency as explained :ref:``here <operation-performance>``
   - locomotive speed limit in ``.eng`` file in the other cases. 
 
-
-  - route speed limit as defined in the ``.trk`` file
-  - local signal speed limit
-  - local speedpost speed limit
-  - local temporary speedpost speed limit
-  - first parameter ``MaxVelocityA`` in ``.con`` file, if bigger than zero, 
-    multiplied by the Efficiency as explained :ref:``here <operation-performance>``.
 
 Start of Run of AI train in a Section Reserved by Another Train
 ---------------------------------------------------------------

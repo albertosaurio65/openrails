@@ -101,6 +101,7 @@ namespace Orts.Simulation.RollingStocks
         public bool IsDavisFriction = true; // Default to new Davis type friction
         public bool IsBelowMergeSpeed = true; // set indicator for low speed operation as per given speed
 
+
         public bool GenericItem1;
         public bool GenericItem2;
                 
@@ -167,11 +168,11 @@ namespace Orts.Simulation.RollingStocks
         public float Curtius_KnifflerC = 0.161f;             //                                      speedMpS * 3.6 + B
         public float AdhesionK = 0.7f;   //slip characteristics slope
         public float AxleInertiaKgm2;    //axle inertia
-        public float WheelSpeedSlipMpS; // speed of wheel if locomotive is slipping
+        public float DriveWheelSpeedMpS; // wheel speed of steam loco drive wheels, allowing for drive wheels to spin different from idle wheels
         public float SlipWarningThresholdPercent = 70;
         public MSTSNotchController WeightLoadController; // Used to control freight loading in freight cars
 
-        public Axles LocomotiveAxles; // Only used at locomotives for efficiency
+        public Axles LocomotiveAxles;
 
         // Colours for smoke and steam effects
         public Color ExhaustTransientColor = Color.Black;
@@ -235,50 +236,12 @@ namespace Orts.Simulation.RollingStocks
         public float BearingHotBoxSmokeDurationS;
         public float BearingHotBoxSmokeVelocityMpS = 15.0f;
         public Color BearingHotBoxSmokeSteadyColor = Color.Gray;
-
-        /// <summary>
-        /// True if vehicle is equipped with an additional emergency brake reservoir
-        /// </summary>
-        public bool EmergencyReservoirPresent;
-        public enum BrakeValveType
-        {
-            None,
-            TripleValve, // Plain triple valve
-            Distributor, // Triple valve with graduated release
-            DistributingValve, // Triple valve + driver brake valve control. Only for locomotives
-        }
-        /// <summary>
-        /// Type of brake valve in the car
-        /// </summary>
-        public BrakeValveType BrakeValve;
-        /// <summary>
-        /// True if equipped with handbrake. (Not common for older steam locomotives.)
-        /// </summary>
-        public bool HandBrakePresent;
-        /// <summary>
-        /// Number of available retainer positions. (Used on freight cars, mostly.) Might be 0, 3 or 4.
-        /// </summary>
-        public int RetainerPositions;
-
-         /// <summary>
-        /// Indicates whether a brake is present or not when Manual Braking is selected.
-        /// </summary>
-        public bool ManualBrakePresent;
+        List<string> BrakeEquipment = new List<string>();
 
         /// <summary>
         /// Indicates whether a non auto (straight) brake is present or not when braking is selected.
         /// </summary>
         public bool NonAutoBrakePresent;
-
-        /// <summary>
-        /// Indicates whether an auxiliary reservoir is present on the wagon or not.
-        /// </summary>
-        public bool AuxiliaryReservoirPresent;
-
-        /// <summary>
-        /// Indicates whether an additional supply reservoir is present on the wagon or not.
-        /// </summary>
-        public bool SupplyReservoirPresent;
 
         /// <summary>
         /// Active locomotive for a control trailer
@@ -513,7 +476,11 @@ namespace Orts.Simulation.RollingStocks
 
             if (CarBogieCentreLengthM == 0)
             {
-                CarBogieCentreLengthM = (CarCouplerFaceLengthM - 4.3f);
+                CarBogieCentreLengthM = CarCouplerFaceLengthM - 4.3f;
+
+                // Prevent negative values on very short train cars
+                if (CarBogieCentreLengthM < 0)
+                    CarBogieCentreLengthM = CarLengthM * 0.65f;
             }
 
             if (CarAirHoseLengthM == 0)
@@ -1124,6 +1091,9 @@ namespace Orts.Simulation.RollingStocks
 
             if (BrakeSystem == null)
                 BrakeSystem = MSTSBrakeSystem.Create(CarBrakeSystemType, this);
+
+            if (TrackGaugeM <= 0) // Use gauge of route/sim settings if gauge wasn't defined
+                TrackGaugeM = Simulator.RouteTrackGaugeM;
         }
 
         // Compute total mass of wagon including freight animations and variable loads like containers
@@ -1148,24 +1118,24 @@ namespace Orts.Simulation.RollingStocks
 
             base.Initialize();
                        
-            if (UnbalancedSuperElevationM == 0 || UnbalancedSuperElevationM > 0.5) // If UnbalancedSuperElevationM > 18", or equal to zero, then set a default value
+            if (MaxUnbalancedSuperElevationM == 0 || MaxUnbalancedSuperElevationM > 0.5) // If MaxUnbalancedSuperElevationM > 18", or equal to zero, then set a default value
             {
                 switch (WagonType)
                 {
                     case WagonTypes.Freight:
-                        UnbalancedSuperElevationM = Me.FromIn(3.0f);  // Unbalanced superelevation has a maximum default value of 3"
+                        MaxUnbalancedSuperElevationM = Me.FromIn(3.0f);  // Unbalanced superelevation has a maximum default value of 3"
                         break;
                     case WagonTypes.Passenger:
-                        UnbalancedSuperElevationM = Me.FromIn(3.0f);  // Unbalanced superelevation has a maximum default value of 3"
+                        MaxUnbalancedSuperElevationM = Me.FromIn(3.0f);  // Unbalanced superelevation has a maximum default value of 3"
                         break;
                     case WagonTypes.Engine:
-                        UnbalancedSuperElevationM = Me.FromIn(6.0f);  // Unbalanced superelevation has a maximum default value of 6"
+                        MaxUnbalancedSuperElevationM = Me.FromIn(6.0f);  // Unbalanced superelevation has a maximum default value of 6"
                         break;
                     case WagonTypes.Tender:
-                        UnbalancedSuperElevationM = Me.FromIn(6.0f);  // Unbalanced superelevation has a maximum default value of 6"
+                        MaxUnbalancedSuperElevationM = Me.FromIn(6.0f);  // Unbalanced superelevation has a maximum default value of 6"
                         break;
                     default:
-                        UnbalancedSuperElevationM = Me.FromIn(0.01f);  // if no value in wag file or is outside of bounds then set to a default value
+                        MaxUnbalancedSuperElevationM = Me.FromIn(0.01f);  // if no value in wag file or is outside of bounds then set to a default value
                         break;
                 }
             }
@@ -1262,7 +1232,7 @@ namespace Orts.Simulation.RollingStocks
                     }
                     stf.SkipRestOfBlock();
                     break;
-                case "wagon(ortsunbalancedsuperelevation": UnbalancedSuperElevationM = stf.ReadFloatBlock(STFReader.UNITS.Distance, null); break;
+                case "wagon(ortsunbalancedsuperelevation": MaxUnbalancedSuperElevationM = stf.ReadFloatBlock(STFReader.UNITS.Distance, null); break;
                 case "wagon(ortsrigidwheelbase":
                     stf.MustMatch("(");
                     RigidWheelBaseM = stf.ReadFloat(STFReader.UNITS.Distance, null);
@@ -1364,30 +1334,11 @@ namespace Orts.Simulation.RollingStocks
                 case "wagon(brakesystemtype":
                     CarBrakeSystemType = stf.ReadStringBlock(null).ToLower();
                     BrakeSystem = MSTSBrakeSystem.Create(CarBrakeSystemType, this);
+                    MSTSBrakeSystem?.SetBrakeEquipment(BrakeEquipment);
                     break;
                 case "wagon(brakeequipmenttype":
-                    foreach (var equipment in stf.ReadStringBlock("").ToLower().Replace(" ", "").Split(','))
-                    {
-                        switch (equipment)
-                        {
-                            case "triple_valve": BrakeValve = BrakeValveType.TripleValve; break;
-                            case "distributor":
-                            case "graduated_release_triple_valve": BrakeValve = BrakeValveType.Distributor; break;
-                            case "distributing_valve": BrakeValve = BrakeValveType.DistributingValve; break;
-                            case "emergency_brake_reservoir": EmergencyReservoirPresent = true; break;
-                            case "handbrake": HandBrakePresent = true; break;
-                            case "auxilary_reservoir": // MSTS legacy parameter - use is discouraged
-                            case "auxiliary_reservoir":
-                                AuxiliaryReservoirPresent = true;
-                                break;
-                            case "manual_brake": ManualBrakePresent = true; break;
-                            case "retainer_3_position": RetainerPositions = 3; break;
-                            case "retainer_4_position": RetainerPositions = 4; break;
-                            case "supply_reservoir":
-                                SupplyReservoirPresent = true;
-                                break;
-                        }
-                    }
+                    BrakeEquipment = stf.ReadStringBlock("").ToLower().Replace(" ", "").Split(',').ToList();
+                    MSTSBrakeSystem?.SetBrakeEquipment(BrakeEquipment);
                     break;
                 case "wagon(coupling":
                     Couplers.Add(new MSTSCoupling()); // Adds a new coupler every time "Coupler" parameters found in WAG and INC file
@@ -1545,9 +1496,7 @@ namespace Orts.Simulation.RollingStocks
                     Couplers[CouplerCountLocation].Rigid = stf.ReadBoolBlock(true);
                     break;
                
-                case "wagon(ortscogwheel":
-                    CogWheelFitted = stf.ReadBoolBlock(false);
-                    break;
+
 
                 case "wagon(adheasion":
                     stf.MustMatch("(");
@@ -1593,9 +1542,7 @@ namespace Orts.Simulation.RollingStocks
                     break;
                 case "wagon(ortspowersupply":
                 case "wagon(ortspowerondelay":
-                case "wagon(ortsbattery(mode":
-                case "wagon(ortsbattery(delay":
-                case "wagon(ortsbattery(defaulton":
+                case "wagon(ortsbattery":
                 case "wagon(ortspowersupplycontinuouspower":
                 case "wagon(ortspowersupplyheatingpower":
                 case "wagon(ortspowersupplyairconditioningpower":
@@ -1668,7 +1615,7 @@ namespace Orts.Simulation.RollingStocks
             TrackGaugeM = copy.TrackGaugeM;
             CentreOfGravityM = copy.CentreOfGravityM;
             InitialCentreOfGravityM = copy.InitialCentreOfGravityM;
-            UnbalancedSuperElevationM = copy.UnbalancedSuperElevationM;
+            MaxUnbalancedSuperElevationM = copy.MaxUnbalancedSuperElevationM;
             RigidWheelBaseM = copy.RigidWheelBaseM;
             CarBogieCentreLengthM = copy.CarBogieCentreLengthM;
             CarBodyLengthM = copy.CarBodyLengthM;
@@ -1735,13 +1682,6 @@ namespace Orts.Simulation.RollingStocks
             IsGreaseFrictionBearing = copy.IsGreaseFrictionBearing;
             CarBrakeSystemType = copy.CarBrakeSystemType;
             BrakeSystem = MSTSBrakeSystem.Create(CarBrakeSystemType, this);
-            EmergencyReservoirPresent = copy.EmergencyReservoirPresent;
-            BrakeValve = copy.BrakeValve;
-            HandBrakePresent = copy.HandBrakePresent;
-            ManualBrakePresent = copy.ManualBrakePresent;
-            AuxiliaryReservoirPresent = copy.AuxiliaryReservoirPresent;
-            SupplyReservoirPresent = copy.SupplyReservoirPresent;
-            RetainerPositions = copy.RetainerPositions;
             InteriorShapeFileName = copy.InteriorShapeFileName;
             InteriorSoundFileName = copy.InteriorSoundFileName;
             Cab3DShapeFileName = copy.Cab3DShapeFileName;
@@ -1753,7 +1693,6 @@ namespace Orts.Simulation.RollingStocks
             Curtius_KnifflerB = copy.Curtius_KnifflerB;
             Curtius_KnifflerC = copy.Curtius_KnifflerC;
             AdhesionK = copy.AdhesionK;
-            CogWheelFitted = copy.CogWheelFitted;
             AxleInertiaKgm2 = copy.AxleInertiaKgm2;
             SlipWarningThresholdPercent = copy.SlipWarningThresholdPercent;
             Lights = copy.Lights;
@@ -1814,7 +1753,7 @@ namespace Orts.Simulation.RollingStocks
                         IntakePointList.Add(new IntakePoint(copyIntakePoint));
                 }
             }
-
+            BrakeEquipment = new List<string>(BrakeEquipment);
             MSTSBrakeSystem.InitializeFromCopy(copy.BrakeSystem);
             if (copy.WeightLoadController != null) WeightLoadController = new MSTSNotchController(copy.WeightLoadController);
 
@@ -1951,7 +1890,7 @@ namespace Orts.Simulation.RollingStocks
 
             outf.Write(WheelBrakeSlideProtectionActive);
             outf.Write(WheelBrakeSlideProtectionTimerS);
-            outf.Write(AngleOfAttackmRad);
+            outf.Write(AngleOfAttackRad);
             outf.Write(DerailClimbDistanceM);
             outf.Write(DerailPossible);
             outf.Write(DerailExpected);
@@ -2008,7 +1947,7 @@ namespace Orts.Simulation.RollingStocks
 
             WheelBrakeSlideProtectionActive = inf.ReadBoolean();
             WheelBrakeSlideProtectionTimerS = inf.ReadInt32();
-            AngleOfAttackmRad = inf.ReadSingle();
+            AngleOfAttackRad = inf.ReadSingle();
             DerailClimbDistanceM = inf.ReadSingle();
             DerailPossible = inf.ReadBoolean();
             DerailExpected = inf.ReadBoolean();
@@ -3155,7 +3094,7 @@ namespace Orts.Simulation.RollingStocks
         private void UpdateWindForce()
         {
             // Calculate compensation for  wind
-            // There are two components due to wind - 
+            // There are two components due to wind -
             // Drag, impact of wind on train, will increase resistance when head on, will decrease resistance when acting as a tailwind.
             // Lateral resistance - due to wheel flange being pushed against rail due to side wind.
             // Calculation based upon information provided in AREA 1942 Proceedings - https://archive.org/details/proceedingsofann431942amer - pg 56
@@ -3167,7 +3106,7 @@ namespace Orts.Simulation.RollingStocks
                 var directionRad = (float)Math.Atan2(WorldPosition.XNAMatrix.M13, WorldPosition.XNAMatrix.M11);
                 var directionDeg = MathHelper.ToDegrees(directionRad);
 
-                // If car is flipped, then the car's direction will be reversed by 180 compared to the rest of the train, and thus for calculation purposes only, 
+                // If car is flipped, then the car's direction will be reversed by 180 compared to the rest of the train, and thus for calculation purposes only,
                 // it is necessary to reverse the "assumed" direction of the car back again. This shouldn't impact the visual appearance of the car.
                 if (Flipped)
                 {
@@ -3177,12 +3116,12 @@ namespace Orts.Simulation.RollingStocks
                     // If this results in an angle greater then 360, then convert it back to an angle between 0 & 360.
                     if (directionDeg > 360)
                         directionDeg -= 360;
-                }                   
+                }
 
                 // If a westerly direction (ie -ve) convert to an angle between 0 and 360
                 if (directionDeg < 0)
                     directionDeg += 360;
-                
+
                 // Find angle between wind and direction of train
                 var resultantWindComponentDeg = 0.0f;
                 if (Train.PhysicsWindDirectionDeg > directionDeg)
@@ -3204,7 +3143,7 @@ namespace Orts.Simulation.RollingStocks
                 var windResultantSpeedMpS = (float)Math.Sqrt(AbsSpeedMpS * AbsSpeedMpS + Train.PhysicsWindSpeedMpS * Train.PhysicsWindSpeedMpS + 2.0f * AbsSpeedMpS * Train.PhysicsWindSpeedMpS * (float)Math.Cos(resultantWindComponentRad));
 
                 // Calculate Drag Resistance
-                // The drag resistance will be the difference between the STILL firction calculated using the standard Davies equation, 
+                // The drag resistance will be the difference between the STILL firction calculated using the standard Davies equation,
                 // and that produced using the wind resultant speed (combination of wind speed and train speed)
                 var tempStillDragResistanceForceN = AbsSpeedMpS * AbsSpeedMpS * DavisCNSSpMM;
                 var tempCombinedDragResistanceForceN = windResultantSpeedMpS * windResultantSpeedMpS * DavisCNSSpMM; // R3 of Davis formula taking into account wind
@@ -3214,7 +3153,7 @@ namespace Orts.Simulation.RollingStocks
                 // This difference will be added or subtracted from the overall friction force depending upon the estimated wind direction.
                 if (tempCombinedDragResistanceForceN > tempStillDragResistanceForceN)
                 {
-                // Wind typically headon to train - increase resistance - +ve differential
+                    // Wind typically headon to train - increase resistance - +ve differential
                     windDragResistanceForceN = tempCombinedDragResistanceForceN - tempStillDragResistanceForceN;
                 }
                 else
@@ -3520,7 +3459,7 @@ namespace Orts.Simulation.RollingStocks
                     }
 
                     // Water scoop spray effects control - always on when scoop over trough, regardless of whether above minimum speed or not
-                    if (ProcessWaterEffects && LocomotiveParameters.IsWaterScoopDown && IsOverTrough() && AbsSpeedMpS > 0.1)
+                    if (ProcessWaterEffects && LocomotiveParameters.IsWaterScoopDown && IsOverTrough && AbsSpeedMpS > 0.1)
                     {
                         float SpeedRatio = AbsSpeedMpS / MpS.FromMpH(100); // Ratio to reduce water disturbance with speed - an arbitary value of 100mph has been chosen as the reference
 
@@ -3669,7 +3608,6 @@ namespace Orts.Simulation.RollingStocks
                         if (Pantographs != null)
                         {
                             Pantographs.HandleEvent(evt);
-                            SignalEvent(Event.PantographToggle);
                         }
                         break;
                 }
@@ -3689,7 +3627,6 @@ namespace Orts.Simulation.RollingStocks
                         if (Pantographs != null)
                         {
                             Pantographs.HandleEvent(evt, id);
-                            SignalEvent(Event.PantographToggle);
                         }
                         break;
                 }
@@ -3730,36 +3667,49 @@ namespace Orts.Simulation.RollingStocks
                 ControlActiveLocomotive = null;
                 return;
             }
-            var controlIndex = 0;
-            var activeIndex = 0;
-            bool controlCar = false;
-            bool activeLocomotive = false;
-
-            // Check to see if this car is an active locomotive, if so then set linkage to relevant control car.
-            // Note this only checks the "closest" locomotive to the control car. Hence it could be "fooled" if there is another locomotive besides the two DMU locomotives.
-
-            for (var i = 0; i < Train.Cars.Count; i++)
+            MSTSLocomotive unmatchedLocomotive = null;
+            MSTSLocomotive unmatchedControlCar = null;
+            foreach (var car in Train.Cars)
             {
-
-                if (activeIndex == 0 && Train.Cars[i].EngineType == TrainCar.EngineTypes.Diesel)
+                if (car.EngineType == TrainCar.EngineTypes.Electric || car.EngineType == TrainCar.EngineTypes.Diesel)
                 {
-                    activeIndex = i;
-                    activeLocomotive = true;
+                    if (unmatchedControlCar != null)
+                    {
+                        if (unmatchedControlCar == this)
+                        {
+                            unmatchedLocomotive = car as MSTSLocomotive;
+                            break;
+                        }
+                        else
+                        {
+                            unmatchedControlCar = null;
+                        }
+                    }
+                    else
+                    {
+                        unmatchedLocomotive = car as MSTSLocomotive;
+                    }
                 }
-
-                if (controlIndex == 0 && Train.Cars[i].EngineType == TrainCar.EngineTypes.Control)
+                if (car.EngineType == TrainCar.EngineTypes.Control)
                 {
-                    controlIndex = i;
-                    controlCar = true;
-                }
-
-                // As soon as the control and active locomotive have been identified, then stop loop.
-                if (activeLocomotive && controlCar)
-                {
-                    ControlActiveLocomotive = Train.Cars[activeIndex] as MSTSDieselLocomotive;                 
-                    return;
+                    if (unmatchedLocomotive != null)
+                    {
+                        if (car == this)
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            unmatchedLocomotive = null;
+                        }
+                    }
+                    else
+                    {
+                        unmatchedControlCar = car as MSTSLocomotive;
+                    }
                 }
             }
+            ControlActiveLocomotive = unmatchedLocomotive;
         }
 
         public void FindTendersSteamLocomotive()

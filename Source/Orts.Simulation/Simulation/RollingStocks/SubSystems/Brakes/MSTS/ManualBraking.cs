@@ -32,6 +32,10 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
         TrainCar Car;
         protected string DebugType = string.Empty;
         float HandbrakePercent;
+         /// <summary>
+        /// Indicates whether a brake is present or not when Manual Braking is selected.
+        /// </summary>
+        public bool ManualBrakePresent;
 
         public ManualBraking(TrainCar car)
         {
@@ -51,7 +55,11 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
         float SteamBrakePressurePSI = 0;
         float SteamBrakeCylinderPressurePSI = 0;
         float BrakeForceFraction;
-
+        public override void SetBrakeEquipment(List<string> equipment)
+        {
+            ManualBrakePresent = equipment.Contains("manual_brake");
+            base.SetBrakeEquipment(equipment);
+        }
         public override bool GetHandbrakeStatus()
         {
             return HandbrakePercent > 0;
@@ -68,6 +76,7 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
 
         public override void InitializeFromCopy(BrakeSystem copy)
         {
+            base.InitializeFromCopy(copy);
             ManualBraking thiscopy = (ManualBraking)copy;
             ManualMaxApplicationRateValuepS = thiscopy.ManualMaxApplicationRateValuepS;
             ManualReleaseRateValuepS = thiscopy.ManualReleaseRateValuepS;
@@ -86,7 +95,7 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
 
         public override void Initialize(bool handbrakeOn, float maxPressurePSI, float fullServPressurePSI, bool immediateRelease)
         {
-            if ((Car as MSTSWagon).ManualBrakePresent)
+            if (ManualBrakePresent)
                 DebugType = "M";
             else
                 DebugType = "-";
@@ -102,7 +111,7 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
             }
 
             // Changes brake type if tender fitted with steam brakes
-            if (Car.WagonType == MSTSWagon.WagonTypes.Tender) 
+            if (Car.WagonType == MSTSWagon.WagonTypes.Tender)
             {
                 var wagonid = Car as MSTSWagon;
                 // Find the associated steam locomotive for this tender
@@ -128,7 +137,7 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
             SteamBrakeCompensation = 1.0f;
 
             // Process manual braking on all cars
-            if (lead != null)
+            if (lead != null && lead.BrakemanBrakeController != null)
             {
                 BrakemanBrakeSettingValue = lead.BrakemanBrakeController.CurrentValue;
             }
@@ -155,11 +164,11 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
             }
 
             BrakeForceFraction = ManualBrakingCurrentFraction / ManualMaxBrakeValue;
-          
+
             // If car is a locomotive or tender, then process engine brake
             if (Car.WagonType == MSTSWagon.WagonTypes.Engine || Car.WagonType == MSTSWagon.WagonTypes.Tender) // Engine brake
             {
-                if (lead != null)
+                if (lead != null && lead.EngineBrakeController != null)
                 {
                     EngineBrakeSettingValue = lead.EngineBrakeController.CurrentValue;
                     if (lead.SteamEngineBrakeFitted)
@@ -171,7 +180,7 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
                     {
                         EngineBrakeDesiredFraction = EngineBrakeSettingValue * ManualMaxBrakeValue;
                     }
-              
+
 
                     if (EngineBrakingCurrentFraction < EngineBrakeDesiredFraction)
                     {
@@ -223,14 +232,6 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
             Car.HuDBrakeShoeFriction = Car.GetBrakeShoeFrictionCoefficientHuD();
 
             Car.BrakeRetardForceN = Car.BrakeShoeForceN * brakeShoeFriction; // calculates value of force applied to wheel, independent of wheel skid
-            if (Car.BrakeSkid) // Test to see if wheels are skiding to excessive brake force
-            {
-                Car.BrakeForceN = Car.BrakeShoeForceN * Car.SkidFriction;   // if excessive brakeforce, wheel skids, and loses adhesion
-            }
-            else
-            {
-                Car.BrakeForceN = Car.BrakeShoeForceN * brakeShoeFriction; // In advanced adhesion model brake shoe coefficient varies with speed, in simple model constant force applied as per value in WAG file, will vary with wheel skid.
-            }
 
         }
 
@@ -255,7 +256,7 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
         {
             // display differently depending upon whether manual brake is present or not
 
-            if ((Car as MSTSWagon).ManualBrakePresent && LocomotiveSteamBrakeFitted)
+            if (ManualBrakePresent && LocomotiveSteamBrakeFitted)
             {
                 return new string[] {
                 DebugType,
@@ -268,13 +269,13 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
                 string.Empty,
                 string.Empty,
                 string.Empty, // Spacer because the state above needs 2 columns.
-                (Car as MSTSWagon).HandBrakePresent ? string.Format("{0:F0}%", HandbrakePercent) : string.Empty,
+                HandBrakePresent ? string.Format("{0:F0}%", HandbrakePercent) : string.Empty,
                 string.Empty,
                 string.Empty,
                 string.Empty,
                 };
             }
-            else if ((Car as MSTSWagon).ManualBrakePresent) // Just manual brakes fitted
+            else if (ManualBrakePresent) // Just manual brakes fitted
             {
                 return new string[] {
                 DebugType,
@@ -286,7 +287,7 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
                 string.Empty,
                 string.Empty,
                 string.Empty, // Spacer because the state above needs 2 columns.
-                (Car as MSTSWagon).HandBrakePresent ? string.Format("{0:F0}%", HandbrakePercent) : string.Empty,
+                HandBrakePresent ? string.Format("{0:F0}%", HandbrakePercent) : string.Empty,
                 string.Empty,
                 string.Empty,
                 string.Empty,
@@ -304,7 +305,7 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
                 string.Empty,
                 string.Empty,
                 string.Empty, // Spacer because the state above needs 2 columns.
-                (Car as MSTSWagon).HandBrakePresent ? string.Format("{0:F0}%", HandbrakePercent) : string.Empty,
+                HandBrakePresent ? string.Format("{0:F0}%", HandbrakePercent) : string.Empty,
                 string.Empty,
                 string.Empty,
                 string.Empty,
@@ -324,7 +325,7 @@ namespace Orts.Simulation.RollingStocks.SubSystems.Brakes.MSTS
 
         public override void SetHandbrakePercent(float percent)
         {
-            if (!(Car as MSTSWagon).HandBrakePresent)
+            if (!HandBrakePresent)
             {
                 HandbrakePercent = 0;
                 return;

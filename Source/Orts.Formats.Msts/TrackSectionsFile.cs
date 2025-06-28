@@ -182,8 +182,18 @@ namespace Orts.Formats.Msts
                     STFException.TraceWarning(stf, "Invalid track section " + token);
 			}
 			stf.SkipRestOfBlock();
-		}
-		public uint NoSections;
+        }
+        public SectionIdx(TrackPath path)
+        {
+            X = 0;
+            Y = 0;
+            Z = 0;
+            A = 0;
+            NoSections = path.NoSections;
+            TrackSections = path.TrackSections;
+        }
+
+        public uint NoSections;
 		public double X,Y,Z;  // Offset
 		public double A;  // Angular offset 
 		public uint[] TrackSections;
@@ -206,7 +216,6 @@ namespace Orts.Formats.Msts
                 new STFReader.TokenProcessor("sectionidx", ()=>{ SectionIdxs[nextPath++] = new SectionIdx(stf); }),
                 new STFReader.TokenProcessor("tunnelshape", ()=>{ TunnelShape = stf.ReadBoolBlock(true); }),
                 new STFReader.TokenProcessor("roadshape", ()=>{ RoadShape = stf.ReadBoolBlock(true); }),
-                new STFReader.TokenProcessor("ortsrackshape", ()=>{ RackShape = stf.ReadBoolBlock(true); }),
             });
 			// TODO - this was removed since TrackShape( 183 ) is blank
 			//if( FileName == null )	throw( new STFError( stf, "Missing FileName" ) );
@@ -221,7 +230,7 @@ namespace Orts.Formats.Msts
 		public SectionIdx[] SectionIdxs;
         public bool TunnelShape;
         public bool RoadShape;
-		public bool RackShape;
+
 	}
 	
 	public class TrackShapes: Dictionary<uint, TrackShape>
@@ -345,7 +354,7 @@ namespace Orts.Formats.Msts
 			}
 			catch (Exception e)
 			{
-				System.Console.WriteLine("Warning: in route tsection.dat " + e.Message);
+				Trace.WriteLine(new FileLoadException("In route tsection.dat", e));
 			}
 		}
 		public uint NoSections;

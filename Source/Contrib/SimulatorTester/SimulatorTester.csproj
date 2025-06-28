@@ -1,14 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks Condition="'$(BuildDotNet)' == 'true'">net6-windows</TargetFrameworks>
-    <TargetFrameworks Condition="'$(TargetFrameworks)' == ''">net472</TargetFrameworks>
+    <TargetFramework Condition="'$(BuildDotNet)' == 'true'">net6-windows</TargetFramework>
+    <TargetFramework Condition="'$(TargetFramework)' == ''">net472</TargetFramework>
     <OutputType>Exe</OutputType>
     <RootNamespace>Orts.SimulatorTester</RootNamespace>
     <AssemblyName>Contrib.SimulatorTester</AssemblyName>
     <ApplicationIcon>..\..\ORTS.ico</ApplicationIcon>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
-    <OutputPath>..\..\..\Program\</OutputPath>
     <IsPublishable>False</IsPublishable>
     <AssemblyTitle>Open Rails Simulator Tester (Contributed)</AssemblyTitle>
     <Description>Open Rails Transport Simulator</Description>
@@ -18,8 +15,8 @@
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\ORTS.Common\ORTS.Common.csproj" />
-    <ProjectReference Include="..\..\ORTS.Settings\ORTS.Settings.csproj" />
+    <ProjectReference Include="..\..\Orts.Common\Orts.Common.csproj" />
+    <ProjectReference Include="..\..\Orts.Settings\Orts.Settings.csproj" />
     <ProjectReference Include="..\..\Orts.Simulation\Orts.Simulation.csproj" />
   </ItemGroup>
   <ItemGroup>

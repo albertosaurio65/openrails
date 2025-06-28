@@ -1,6 +1,6 @@
 ﻿// #define INCLUDE_TIMETABLE_INPUT
 
-namespace ORTS
+namespace Menu
 {
     partial class MainForm
     {
@@ -99,19 +99,20 @@ namespace ORTS
             this.testingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.contextMenuStripTools = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.contextMenuStripDocuments = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.lblNotificationCount = new System.Windows.Forms.Label();
+            this.pbNotificationsSome = new System.Windows.Forms.PictureBox();
             this.pbNotificationsNone = new System.Windows.Forms.PictureBox();
             this.pictureBoxLogo = new System.Windows.Forms.PictureBox();
-            this.pbNotificationsSome = new System.Windows.Forms.PictureBox();
-            this.lblNotificationCount = new System.Windows.Forms.Label();
+            this.ttNotifications = new System.Windows.Forms.ToolTip(this.components);
             this.groupBox1.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.panel1.SuspendLayout();
             this.panelModeActivity.SuspendLayout();
             this.panelModeTimetable.SuspendLayout();
             this.contextMenuStripTools.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pbNotificationsSome)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbNotificationsNone)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxLogo)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.pbNotificationsSome)).BeginInit();
             this.SuspendLayout();
             // 
             // buttonStart
@@ -168,7 +169,7 @@ namespace ORTS
             this.buttonResume.Enabled = false;
             this.buttonResume.Location = new System.Drawing.Point(7, 79);
             this.buttonResume.Name = "buttonResume";
-            this.buttonResume.Size = new System.Drawing.Size(75, 35);
+            this.buttonResume.Size = new System.Drawing.Size(75, 41);
             this.buttonResume.TabIndex = 1;
             this.buttonResume.Text = "Resume/ Replay...";
             this.buttonResume.Click += new System.EventHandler(this.buttonResume_Click);
@@ -277,7 +278,7 @@ namespace ORTS
             // 
             this.radioButtonMPServer.Location = new System.Drawing.Point(9, 91);
             this.radioButtonMPServer.Name = "radioButtonMPServer";
-            this.radioButtonMPServer.Size = new System.Drawing.Size(58, 20);
+            this.radioButtonMPServer.Size = new System.Drawing.Size(75, 20);
             this.radioButtonMPServer.TabIndex = 9;
             this.radioButtonMPServer.Text = "Server";
             this.radioButtonMPServer.UseVisualStyleBackColor = true;
@@ -876,15 +877,42 @@ namespace ORTS
             this.contextMenuStripDocuments.Name = "contextMenuStripDocuments";
             this.contextMenuStripDocuments.Size = new System.Drawing.Size(61, 4);
             // 
+            // lblNotificationCount
+            // 
+            this.lblNotificationCount.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(234)))), ((int)(((byte)(0)))), ((int)(((byte)(6)))));
+            this.lblNotificationCount.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblNotificationCount.ForeColor = System.Drawing.Color.White;
+            this.lblNotificationCount.Location = new System.Drawing.Point(827, 3);
+            this.lblNotificationCount.Name = "lblNotificationCount";
+            this.lblNotificationCount.Size = new System.Drawing.Size(8, 8);
+            this.lblNotificationCount.TabIndex = 42;
+            this.lblNotificationCount.Text = "1";
+            this.lblNotificationCount.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.lblNotificationCount.Visible = false;
+            this.lblNotificationCount.Click += new System.EventHandler(this.lblNotificationCount_Click);
+            // 
+            // pbNotificationsSome
+            // 
+            this.pbNotificationsSome.BackColor = System.Drawing.Color.Transparent;
+            this.pbNotificationsSome.Image = global::Menu.Properties.Resources.chat_icon_new_message_transparent;
+            this.pbNotificationsSome.Location = new System.Drawing.Point(805, 0);
+            this.pbNotificationsSome.Name = "pbNotificationsSome";
+            this.pbNotificationsSome.Size = new System.Drawing.Size(37, 31);
+            this.pbNotificationsSome.TabIndex = 41;
+            this.pbNotificationsSome.TabStop = false;
+            this.ttNotifications.SetToolTip(this.pbNotificationsSome, "Notifications published by Open Rails");
+            this.pbNotificationsSome.Click += new System.EventHandler(this.pbNotificationsSome_Click);
+            // 
             // pbNotificationsNone
             // 
-            this.pbNotificationsNone.Image = global::ORTS.Properties.Resources.chat_icon_no_message_transparent;
+            this.pbNotificationsNone.Image = global::Menu.Properties.Resources.chat_icon_no_message_transparent;
             this.pbNotificationsNone.InitialImage = ((System.Drawing.Image)(resources.GetObject("pbNotificationsNone.InitialImage")));
             this.pbNotificationsNone.Location = new System.Drawing.Point(805, 0);
             this.pbNotificationsNone.Name = "pbNotificationsNone";
             this.pbNotificationsNone.Size = new System.Drawing.Size(37, 31);
             this.pbNotificationsNone.TabIndex = 40;
             this.pbNotificationsNone.TabStop = false;
+            this.ttNotifications.SetToolTip(this.pbNotificationsNone, "Notifications published by Open Rails");
             this.pbNotificationsNone.Click += new System.EventHandler(this.pbNotificationsNone_Click);
             // 
             // pictureBoxLogo
@@ -898,38 +926,12 @@ namespace ORTS
             this.pictureBoxLogo.TabIndex = 5;
             this.pictureBoxLogo.TabStop = false;
             // 
-            // pbNotificationsSome
-            // 
-            this.pbNotificationsSome.BackColor = System.Drawing.Color.Transparent;
-            this.pbNotificationsSome.Image = global::ORTS.Properties.Resources.chat_icon_new_message_transparent;
-            this.pbNotificationsSome.Location = new System.Drawing.Point(805, 0);
-            this.pbNotificationsSome.Name = "pbNotificationsSome";
-            this.pbNotificationsSome.Size = new System.Drawing.Size(37, 31);
-            this.pbNotificationsSome.TabIndex = 41;
-            this.pbNotificationsSome.TabStop = false;
-            this.pbNotificationsSome.Click += new System.EventHandler(this.pbNotificationsSome_Click);
-            // 
-            // lblNotificationCount
-            // 
-            this.lblNotificationCount.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(234)))), ((int)(((byte)(0)))), ((int)(((byte)(6)))));
-            this.lblNotificationCount.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblNotificationCount.ForeColor = System.Drawing.Color.White;
-            this.lblNotificationCount.Location = new System.Drawing.Point(827, 3);
-            this.lblNotificationCount.Name = "lblNotificationCount";
-            this.lblNotificationCount.Size = new System.Drawing.Size(8, 8);
-            this.lblNotificationCount.TabIndex = 42;
-            this.lblNotificationCount.Text = "1";
-            this.lblNotificationCount.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.lblNotificationCount.Click += new System.EventHandler(this.lblNotificationCount_Click);
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(854, 548);
             this.Controls.Add(this.lblNotificationCount);
-            this.Controls.Add(this.pbNotificationsSome);
-            this.Controls.Add(this.pbNotificationsNone);
             this.Controls.Add(this.panelModeTimetable);
             this.Controls.Add(this.panelModeActivity);
             this.Controls.Add(this.radioButtonModeTimetable);
@@ -945,6 +947,8 @@ namespace ORTS
             this.Controls.Add(this.pictureBoxLogo);
             this.Controls.Add(this.labelLogo);
             this.Controls.Add(this.label2);
+            this.Controls.Add(this.pbNotificationsSome);
+            this.Controls.Add(this.pbNotificationsNone);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
@@ -963,9 +967,9 @@ namespace ORTS
             this.panelModeTimetable.ResumeLayout(false);
             this.panelModeTimetable.PerformLayout();
             this.contextMenuStripTools.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pbNotificationsSome)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbNotificationsNone)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxLogo)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.pbNotificationsSome)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -1043,5 +1047,6 @@ namespace ORTS
         private System.Windows.Forms.PictureBox pbNotificationsNone;
         private System.Windows.Forms.PictureBox pbNotificationsSome;
         private System.Windows.Forms.Label lblNotificationCount;
+        private System.Windows.Forms.ToolTip ttNotifications;
     }
 }

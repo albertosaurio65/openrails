@@ -17,15 +17,27 @@
 
 using System;
 using System.IO;
-using ORTS.Common;
 using Orts.Common;
 using Orts.Simulation.RollingStocks.SubSystems;
+using ORTS.Common;
 using ORTS.Scripting.Api.ETCS;
+using Orts.Simulation;
+using Orts.Simulation.RollingStocks;
+using Orts.Simulation.RollingStocks.SubSystems;
 
 namespace ORTS.Scripting.Api
 {
     public abstract class TrainControlSystem : AbstractTrainScriptClass
     {
+        internal ScriptedTrainControlSystem Host;
+        internal MSTSLocomotive Locomotive => Host.Locomotive;
+        internal Simulator Simulator => Host.Simulator;
+
+        internal void AttachToHost(ScriptedTrainControlSystem host)
+        {
+            Host = host;
+        }
+
         public bool Activated { get; set; }
 
         public readonly ETCSStatus ETCSStatus = new ETCSStatus();
@@ -156,10 +168,6 @@ namespace ORTS.Scripting.Api
         /// </summary>
         public Func<int, float> EOADistanceM;
         /// <summary>
-        /// Train's length
-        /// </summary>
-        public Func<float> TrainLengthM;
-        /// <summary>
         /// Locomotive direction.
         /// </summary>
         public Func<Direction> CurrentDirection;
@@ -253,9 +261,14 @@ namespace ORTS.Scripting.Api
         /// </summary>
         public Func<bool> DoesBrakeCutPower;
         /// <summary>
-        /// Train brake pressure value which triggers the power cut-off.
+        /// Deprecated. Returns positive infinity if traction cutoff is requested by the brake system, and negative infinity if it is not requested
         /// </summary>
-        public Func<float> BrakeCutsPowerAtBrakeCylinderPressureBar;
+        [Obsolete("BrakeCutsPowerAtBrakeCylinderPressureBar() is deprecated, use BrakeSystemTractionAuthorization instead")]
+        public float BrakeCutsPowerAtBrakeCylinderPressureBar()
+        {
+            return BrakeSystemTractionAuthorization ? float.PositiveInfinity : float.NegativeInfinity;
+        }
+        public bool BrakeSystemTractionAuthorization => Host.BrakeSystemTractionAuthorization;
         /// <summary>
         /// State of the train brake controller.
         /// </summary>
@@ -348,6 +361,36 @@ namespace ORTS.Scripting.Api
         /// Set dynamic brake controller to position in range [0-1].
         /// </summary>
         public Action<float> SetDynamicBrakeController;
+        /// <summary>
+        /// Sets the target speed of the automatic traction/braking system
+        /// Gets the current speed enforced by the automatic traction/braking system
+        /// </summary>
+        public float? SetSpeedMpS
+        {
+            get
+            {
+                if (Locomotive.CruiseControl?.SpeedRegMode == CruiseControl.SpeedRegulatorMode.Auto) return Locomotive.CruiseControl.SetSpeedMpS;
+                return null;
+            }
+            set
+            {
+                if (Locomotive.CruiseControl != null) Locomotive.CruiseControl.ASCSetSpeedMpS = value;
+            }
+        }
+        /// <summary>
+        /// Controls the target acceleration of the automatic traction/braking system when a braking curve is active
+        /// </summary>
+        public float SetSpeedAccelerationMpSS
+        {
+            get
+            {
+                return Locomotive?.CruiseControl.ASCAccelerationMpSS ?? 0;
+            }
+            set
+            {
+                if (Locomotive.CruiseControl != null) Locomotive.CruiseControl.ASCAccelerationMpSS = value;
+            }
+        }
         /// <summary>
         /// Cut power by pull all pantographs down.
         /// </summary>
@@ -520,6 +563,36 @@ namespace ORTS.Scripting.Api
         /// Get string parameter in the INI file.
         /// </summary>
         public Func<string, string, string, string> GetStringParameter;
+
+
+        /// <summary>
+        /// Sends an event to the power supply
+        /// </summary>
+        /// <param name="evt">The event to send</param>
+        public void SignalEventToPowerSupply(PowerSupplyEvent evt)
+        {
+            Locomotive.LocomotivePowerSupply.HandleEventFromTcs(evt);
+        }
+
+        /// <summary>
+        /// Sends an event to the power supply
+        /// </summary>
+        /// <param name="evt">The event to send</param>
+        /// <param name="id">Additional id for the event</param>
+        public void SignalEventToPowerSupply(PowerSupplyEvent evt, int id)
+        {
+            Locomotive.LocomotivePowerSupply.HandleEventFromTcs(evt, id);
+        }
+
+        /// <summary>
+        /// Sends an event and/or a message to the power supply
+        /// </summary>
+        /// <param name="evt">The event to send</param>
+        /// <param name="message">The message to send</param>
+        public void SignalEventToPowerSupply(PowerSupplyEvent evt, string message)
+        {
+            Locomotive.LocomotivePowerSupply.HandleEventFromTcs(evt, message);
+        }
 
         /// <summary>
         /// Called once at initialization time.

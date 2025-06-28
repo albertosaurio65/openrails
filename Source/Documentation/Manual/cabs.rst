@@ -289,8 +289,7 @@ Example::
    single: ORTS_PLAYER_DIESEL_ENGINE_STATE
 
 ORTS_PLAYER_DIESEL_ENGINE_STATE: this control respectively selects frames 0, 
-1, 2, 3 for the player locomotive engine states Stopped, Starting, Running and 
-Stopping. It is a display-only control.
+1, 2, 3 for the player locomotive engine states Stopped, Stopping, Starting and Running. It is a display-only control.
 
 Example::
 
@@ -339,14 +338,29 @@ separate commands (e.g. 2 buttons).
 
 Example::
 
-                TwoState (
-                        Type ( ORTS_PLAYER_DIESEL_ENGINE_STOPPER TWO_STATE)
-                        Position ( 350 446 27 26 )
-                        Graphic ( Bell.ace )
-                        NumFrames ( 2 2 1 )
-                        Style ( PRESSED )
-                        MouseControl ( 1 )
-                )
+		MultiStateDisplay (
+			Type ( ORTS_PLAYER_DIESEL_ENGINE_STATE MULTI_STATE_DISPLAY )
+			Position ( 140 306 6.5 6.25 )
+			Graphic ( "engine_state.ace" )
+			States ( 4 4 1
+				State (
+					Style ( 0 )
+					SwitchVal ( 0 )
+				)
+				State (
+					Style ( 0 )
+					SwitchVal ( 1 )
+				)
+				State (
+					Style ( 0 )
+					SwitchVal ( 2 )
+				)
+				State (
+					Style ( 0 )
+					SwitchVal ( 3 )
+				)
+			)
+		)
 
 
 

@@ -1106,7 +1106,7 @@ namespace Orts.Simulation.RollingStocks
                 case "engine(dynamicbrakesresistorcurrentlimit": DynamicBrakeMaxCurrentA = stf.ReadFloatBlock(STFReader.UNITS.Current, null); break;
                 case "engine(numwheels": MSTSLocoNumDrvWheels = stf.ReadFloatBlock(STFReader.UNITS.None, 4.0f); if (MSTSLocoNumDrvWheels < 1) STFException.TraceWarning(stf, "Engine:NumWheels is less than 1, parts of the simulation may not function correctly"); break;
                 case "engine(ortsnumberdriveaxles": LocoNumDrvAxles = stf.ReadIntBlock(null); if (LocoNumDrvAxles < 1) STFException.TraceWarning(stf, "Engine:ORTSNumberDriveAxles is less than 1, parts of the simulation may not function correctly"); break;
-                case "engine(antislip": AntiSlip = stf.ReadBoolBlock(false); break;
+                case "engine(antislip": AntiSlip = stf.ReadBoolBlock(true); break;
                 case "engine(ortsdrivewheelweight": InitialDrvWheelWeightKg = stf.ReadFloatBlock(STFReader.UNITS.Mass, null); break;
                 case "engine(engineoperatingprocedures": EngineOperatingProcedures = stf.ReadStringBlock(""); break;
                 case "engine(headout":
@@ -1683,10 +1683,10 @@ namespace Orts.Simulation.RollingStocks
                 {
                     if (axle.DriveType != AxleDriveType.NotDriven)
                     {
-                        InductionMotor motor = new InductionMotor(axle, this);
-                        TractionMotors.Add(motor);
-                    }
+                    InductionMotor motor = new InductionMotor(axle, this);
+                    TractionMotors.Add(motor);
                 }
+            }
             }
             SlipControlActive = new bool[LocomotiveAxles.Count];
             if (SlipControlSystem == SlipControlType.Unknown)
@@ -2579,14 +2579,14 @@ namespace Orts.Simulation.RollingStocks
             if (TractiveForceCurves == null)
             {
                 powerW = Math.Min(powerW, MaxPowerW * t * t * (1 - PowerReduction));
-
-                if (AbsTractionSpeedMpS > MaxSpeedMpS - 0.05f)
-                {
-                    forceN = 20 * (MaxSpeedMpS - AbsTractionSpeedMpS) * MaxForceN * (1 - PowerReduction);
-                }
-                else if (AbsTractionSpeedMpS > MaxSpeedMpS)
+                
+                if (AbsTractionSpeedMpS > MaxSpeedMpS)
                 {
                     forceN = 0;
+                }
+                else if (AbsTractionSpeedMpS > MaxSpeedMpS - 0.05f)
+                {
+                    forceN = 20 * (MaxSpeedMpS - AbsTractionSpeedMpS) * MaxForceN * (1 - PowerReduction);
                 }
                 else
                 {
@@ -2753,7 +2753,7 @@ namespace Orts.Simulation.RollingStocks
                     }
                     else if (SlipControlSystem == SlipControlType.CutPower)
                     {
-                        if (!DynamicBrake)
+                        if (axle.DriveForceN != 0)
                         {
                             if (axle.HuDIsWheelSlip) SlipControlActive[i] = true;
                         }
@@ -2767,7 +2767,7 @@ namespace Orts.Simulation.RollingStocks
                     }
                     else if (SlipControlSystem == SlipControlType.ReduceForce)
                     {
-                        if (!DynamicBrake && axle.DriveForceN != 0 && AdvancedAdhesionModel)
+                        if (axle.DriveForceN != 0 && (AdvancedAdhesionModel || !AntiSlip))
                         {
                             if (axle.SlipPercent > axle.SlipWarningTresholdPercent) SlipControlActive[i] = true;
                         }
@@ -5060,7 +5060,7 @@ namespace Orts.Simulation.RollingStocks
             {
                 case CABViewControlTypes.SPEEDOMETER:
                     {
-                        data = WheelSpeedMpS;
+                            data = WheelSpeedMpS;
 
                         if (cvc.Units == CABViewControlUnits.KM_PER_HOUR)
                             data *= 3.6f;
@@ -5503,6 +5503,16 @@ namespace Orts.Simulation.RollingStocks
                                 break;
 
                         }
+                        break;
+                    }
+                case CABViewControlTypes.ORTS_NEUTRAL_MODE_COMMAND_SWITCH:
+                    {
+                        data = (TrainBrakeController == null || !TrainBrakeController.NeutralModeCommandSwitchOn) ? 0 : 1;
+                        break;
+                    }
+                case CABViewControlTypes.ORTS_NEUTRAL_MODE_ON:
+                    {
+                        data = (TrainBrakeController == null || !TrainBrakeController.NeutralModeOn) ? 0 : 1;
                         break;
                     }
                 case CABViewControlTypes.FRICTION_BRAKING:

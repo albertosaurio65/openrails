@@ -187,6 +187,8 @@ namespace Orts.Simulation.RollingStocks
         public float CarWidthM = 2.5f;
         public float CarLengthM = 40;       // derived classes must overwrite these defaults
         public float CarHeightM = 4;        // derived classes must overwrite these defaults
+        public int FrontArticulation = -1;  // -1: Determine front articulation automatically, 0: Force no front articulation, 1: Force front articulation
+        public int RearArticulation = -1;   // -1: Determine rear articulation automatically, 0: Force no rear articulation, 1: Force rear articulation
         public float MassKG = 10000;        // Mass in KG at runtime; coincides with InitialMassKG if there is no load and no ORTS freight anim
         public float InitialMassKG = 10000;
         public bool IsDriveable;
@@ -212,10 +214,7 @@ namespace Orts.Simulation.RollingStocks
 
         public float MaxHandbrakeForceN;
         public float MaxBrakeForceN = 89e3f;
-        public float MaxBrakeShoeForceN; // This is the force applied to the brake shoe, hence it will be decreased by CoF to give force applied to the wheel
         public int NumberCarBrakeShoes;
-        public float InitialMaxHandbrakeForceN;  // Initial force when agon initialised
-        public float InitialMaxBrakeForceN = 89e3f;   // Initial force when wagon initialised, this is the force on the wheel, ie after the brake shoe.
 
         // Coupler Animation
         public AnimatedCoupler FrontCoupler = new AnimatedCoupler();
@@ -565,7 +564,15 @@ namespace Orts.Simulation.RollingStocks
                 Train.MUDirection = Flipped ^ loco.UsingRearCab ? DirectionControl.Flip(value) : value;
             }
         }
+
+        /// <summary>The actually used brake system. When mode is changed, this one is updated from the values of <see cref="BrakeSystems"/> and used directly</summary>
         public BrakeSystem BrakeSystem;
+        /// <summary>Alternative for dual vacuum/air vehicles, to be swapped with <see cref="BrakeSystem"/> and used directly</summary>
+        protected BrakeSystem BrakeSystemAlt;
+        /// <summary>Store for the various loades within modes. Never used directly, only the non-zero values get copied into <see cref="BrakeSystem"/></summary>
+        public readonly Dictionary<(BrakeModes BrakeMode, float MinMass), BrakeSystem> BrakeSystems = new Dictionary<(BrakeModes, float), BrakeSystem>();
+        /// <summary>Filter for the <see cref="BrakeSystems"/>, in case that comes from an include file</summary>
+        public string[] BrakeModeNames { get; protected set; }
 
         public float PreviousSteamBrakeCylinderPressurePSI;
 
@@ -766,11 +773,11 @@ namespace Orts.Simulation.RollingStocks
             if (BrakeShoeType == BrakeShoeTypes.Cast_Iron_P10 || BrakeShoeType == BrakeShoeTypes.Cast_Iron_P6 || BrakeShoeType == BrakeShoeTypes.High_Friction_Composite || BrakeShoeType == BrakeShoeTypes.Disc_Pads)
             {
                 float NewtonsTokNewtons = 0.001f;
-                float maxBrakeShoeForcekN = NewtonsTokNewtons * MaxBrakeShoeForceN / NumberCarBrakeShoes;
+                float maxBrakeShoeForcekN = NewtonsTokNewtons * BrakeSystem.MaxBrakeShoeForceN / NumberCarBrakeShoes;
 
                 if (maxBrakeShoeForcekN > 20 && Simulator.Settings.VerboseConfigurationMessages)
                 {
-                    Trace.TraceInformation("Maximum force per brakeshoe is {0} and has exceeded {1}, check MaxBrakeShoeForceN {2} or NumberCarBrakeShoes {3}",  FormatStrings.FormatForce(maxBrakeShoeForcekN * 1000, IsMetric), FormatStrings.FormatForce(20 * 1000, IsMetric), FormatStrings.FormatForce(MaxBrakeShoeForceN, IsMetric), NumberCarBrakeShoes);
+                    Trace.TraceInformation("Maximum force per brakeshoe is {0} and has exceeded {1}, check MaxBrakeShoeForceN {2} or NumberCarBrakeShoes {3}",  FormatStrings.FormatForce(maxBrakeShoeForcekN * 1000, IsMetric), FormatStrings.FormatForce(20 * 1000, IsMetric), FormatStrings.FormatForce(BrakeSystem.MaxBrakeShoeForceN, IsMetric), NumberCarBrakeShoes);
                 }
             } 
             
@@ -2174,6 +2181,7 @@ namespace Orts.Simulation.RollingStocks
             outf.Write(UiD);
             outf.Write(CarID);
             BrakeSystem.Save(outf);
+            BrakeSystemAlt.Save(outf);
             outf.Write(TractionForceN);
             outf.Write(DynamicBrakeForceN);
             outf.Write(MotiveForceN);
@@ -2198,6 +2206,7 @@ namespace Orts.Simulation.RollingStocks
             UiD = inf.ReadInt32();
             CarID = inf.ReadString();
             BrakeSystem.Restore(inf);
+            BrakeSystemAlt.Restore(inf);
             TractionForceN = inf.ReadSingle();
             DynamicBrakeForceN = inf.ReadSingle();
             MotiveForceN = inf.ReadSingle();
@@ -2716,34 +2725,36 @@ namespace Orts.Simulation.RollingStocks
             // Decided to control what is sent to SetUpWheelsArticulation()by using
             // WheelAxlesLoaded as a flag.  This way, wagons that have to be processed are included
             // and the rest left out.
-            bool articulatedFront = !WheelAxles.Any(a => a.OffsetM.Z < 0);
-            bool articulatedRear = !WheelAxles.Any(a => a.OffsetM.Z > 0);
-            var carIndex = Train.Cars.IndexOf(this);
-            //Certain locomotives are testing as articulated wagons for some reason.
-            if (WagonType != WagonTypes.Engine)
-                if (WheelAxles.Count != 1 && (articulatedFront || articulatedRear))
+
+            // Force articulation if stock is configured as such
+            // Otherwise, use default behavior which gives articulation if there are no axles forward/reareward on the mode,
+            // disables articulation on engines, and only allows articulation with 3 or fewer axles, but not 1 axle
+            bool articulatedFront = (FrontArticulation == 1 ||
+                (FrontArticulation == -1 && !WheelAxles.Any(a => a.OffsetM.Z < 0) && WagonType != WagonTypes.Engine && WheelAxles.Count != 1 && WheelAxles.Count <= 3));
+            bool articulatedRear = (RearArticulation == 1 ||
+                (RearArticulation == -1 && !WheelAxles.Any(a => a.OffsetM.Z > 0) && WagonType != WagonTypes.Engine && WheelAxles.Count != 1 && WheelAxles.Count <= 3));
+
+            if (articulatedFront || articulatedRear)
                 {
                     WheelAxlesLoaded = true;
-                    SetUpWheelsArticulation(carIndex);
+                SetUpWheelsArticulation(articulatedFront, articulatedRear);
                 }
         } // end SetUpWheels()
 
-        protected void SetUpWheelsArticulation(int carIndex)
+        protected void SetUpWheelsArticulation(bool front, bool rear)
         {
             // If there are no forward wheels, this car is articulated (joined
             // to the car in front) at the front. Likewise for the rear.
-            bool articulatedFront = !WheelAxles.Any(a => a.OffsetM.Z < 0);
-            bool articulatedRear = !WheelAxles.Any(a => a.OffsetM.Z > 0);
             // Original process originally used caused too many issues.
             // The original process did include the below process of just using WheelAxles.Add
             //  if the initial test did not work.  Since the below process is working without issues the
             //  original process was stripped down to what is below
-            if (articulatedFront || articulatedRear)
+            if (front || rear)
             {
-                if (articulatedFront && WheelAxles.Count <= 3)
+                if (front)
                     WheelAxles.Add(new WheelAxle(new Vector3(0.0f, BogiePivotHeightM, -CarLengthM / 2.0f), 0, 0) { Part = Parts[0] });
 
-                if (articulatedRear && WheelAxles.Count <= 3)
+                if (rear)
                     WheelAxles.Add(new WheelAxle(new Vector3(0.0f, BogiePivotHeightM, CarLengthM / 2.0f), 0, 0) { Part = Parts[0] });
 
                 WheelAxles.Sort(WheelAxles[0]);

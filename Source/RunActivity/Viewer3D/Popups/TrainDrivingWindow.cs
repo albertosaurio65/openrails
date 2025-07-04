@@ -1064,12 +1064,12 @@ namespace Orts.Viewer3D.Popups
                 if (locomotive is MSTSDieselLocomotive && train.DPMode == -1)
                     dynBrakeString += string.Format(" | {0:F0}%", train.DPDynamicBrakePercent);
 
-                    AddLabel(new ListLabel
-                    {
-                        FirstCol = Viewer.Catalog.GetString("Dynamic brake"),
+                AddLabel(new ListLabel
+                {
+                    FirstCol = Viewer.Catalog.GetString("Dynamic brake"),
                     LastCol = dynBrakeString + dynBrakeColor,
-                    });
-                }
+                });
+            }
 
             AddSeparator();
 

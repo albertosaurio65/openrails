@@ -3348,6 +3348,7 @@ the following parameters will adjust the behaviour of air brakes:
    single: ORTSTrainDynamicBlendingTable
    single: ORTSDynamicBrakeReplacementWithEngineBrake 
    single: ORTSDynamicBrakeReplacementWithEngineBrakeAtSpeed
+   single: ORTSDynamicBrakeBlendingEmergencyOverride
    
 - ``Engine(DynamicBrakeHasAutoBailOff`` -- Set to 1 if brake cylinders are
   emptied while dynamic brake is active
@@ -3362,6 +3363,10 @@ the following parameters will adjust the behaviour of air brakes:
 - ``Engine(ORTSDynamicBlendingMinimumSpeed`` -- Below the specified speed
   (default units mph, default value 5 mph / 8 kph), local dynamic brake blending
   will be disabled, allowing locomotive brakes to hold the train while stopped.
+- ``Engine(ORTSDynamicBrakeBlendingEmergencyOverride`` -- If this parameter is set to 1 (default),
+  dynamic brake blending is completely disabled during emergency braking conditions.
+  Only pneumatic brakes will be active during emergency stops, ensuring consistent
+  and predictable emergency braking performance without dynamic brake intervention.
   
 Sometimes the train brake controller is capable to apply the dynamic
 brakes for the whole consist, usually as a first step before air brakes

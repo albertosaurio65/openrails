@@ -423,6 +423,7 @@ namespace Orts.Simulation.RollingStocks
         public float DynamicBrakeBlendingRetainedPressurePSI { get; private set; } = -1.0f; // the amount of pressure that will always be retained in the brake cylinders during blended braking
         public float DynamicBrakeBlendingMinSpeedMpS { get; private set; } = -1.0f; // below this speed, blended braking is disabled
         protected bool DynamicBrakeControllerSetupLock; // if true if dynamic brake lever will lock until dynamic brake is available
+        public bool DynamicBrakeBlendingEmergencyOverride = true; // if true, disables dynamic brake blending during emergency braking
 
         public float DynamicBrakeBlendingPercent { get; protected set; } = -1;
 
@@ -1100,6 +1101,7 @@ namespace Orts.Simulation.RollingStocks
                 case "engine(ortsdynamicbrakereplacementwithenginebrake": DynamicBrakeEngineBrakeReplacement = stf.ReadBoolBlock(false); break;
                 case "engine(ortsdynamicbrakereplacementwithenginebrakeatspeed": DynamicBrakeEngineBrakeReplacementSpeed = stf.ReadFloatBlock(STFReader.UNITS.SpeedDefaultMPH, null); break;
                 case "engine(ortsdynamicblendingminimumspeed": DynamicBrakeBlendingMinSpeedMpS = stf.ReadFloatBlock(STFReader.UNITS.SpeedDefaultMPH, null); break;
+                case "engine(ortsdynamicblendingemergencyoverride": DynamicBrakeBlendingEmergencyOverride = stf.ReadBoolBlock(true); break;
                 case "engine(dynamicbrakesdelaytimebeforeengaging": DynamicBrakeDelayS = stf.ReadFloatBlock(STFReader.UNITS.Time, null); break;
                 case "engine(dynamicbrakesresistorcurrentlimit": DynamicBrakeMaxCurrentA = stf.ReadFloatBlock(STFReader.UNITS.Current, null); break;
                 case "engine(numwheels": MSTSLocoNumDrvWheels = stf.ReadFloatBlock(STFReader.UNITS.None, 4.0f); if (MSTSLocoNumDrvWheels < 1) STFException.TraceWarning(stf, "Engine:NumWheels is less than 1, parts of the simulation may not function correctly"); break;
@@ -1341,6 +1343,7 @@ namespace Orts.Simulation.RollingStocks
             DynamicBrakeBlendingForceMatch = locoCopy.DynamicBrakeBlendingForceMatch;
             DynamicBrakeBlendingRetainedPressurePSI = locoCopy.DynamicBrakeBlendingRetainedPressurePSI;
             DynamicBrakeControllerSetupLock = locoCopy.DynamicBrakeControllerSetupLock;
+            DynamicBrakeBlendingEmergencyOverride = locoCopy.DynamicBrakeBlendingEmergencyOverride;
 
             MainPressureUnit = locoCopy.MainPressureUnit;
             BrakeSystemPressureUnits = locoCopy.BrakeSystemPressureUnits;
@@ -2033,7 +2036,15 @@ namespace Orts.Simulation.RollingStocks
         public void DynamicBrakeBlending(float elapsedClockSeconds)
         {
             // Local blending
-            if (airPipeSystem == null)
+             if (airPipeSystem == null)
+            {
+                DynamicBrakeBlendingPercent = -1;
+                return;
+              }
+            // Check if dynamic brake blending should be disabled during emergency braking conditions
+            if (DynamicBrakeBlendingEmergencyOverride &&
+                TrainBrakeController != null &&
+                TrainBrakeController.GetStatus().Contains("Emergency"))
             {
                 DynamicBrakeBlendingPercent = -1;
                 return;
@@ -2654,6 +2665,19 @@ namespace Orts.Simulation.RollingStocks
         }
         protected virtual void UpdateDynamicBrakeForce(float elapsedClockSeconds)
         {
+            // Check if dynamic brake blending should be overridden during emergency braking
+            // When DynamicBrakeBlendingEmergencyOverride is true and train brake controller is in emergency state,
+            // completely disable dynamic brake force and blending to ensure only pneumatic brakes are active
+            if (DynamicBrakeBlendingEmergencyOverride &&
+                TrainBrakeController != null &&
+                TrainBrakeController.GetStatus().Contains("Emergency"))
+            {
+                DynamicBrakeForceN = 0;
+                DynamicBrake = false;
+                DynamicBrakeCommandStartTime = null;
+                DynamicBrakeBlendingPercent = -1;
+                return;
+            }
             if (ThrottlePercent <= 0 && TractionForceN <= 0 && LocomotivePowerSupply.DynamicBrakeAvailable && Direction != Direction.N && DynamicBrakePercent >= 0)
             {
                 if (DynamicBrakeCommandStartTime == null)

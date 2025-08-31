@@ -5654,6 +5654,96 @@ namespace Orts.Simulation.RollingStocks
                         break;
                     }
 
+                    case CABViewControlTypes.ORTS_HELPERS_DIESEL_RPM:
+                        data = 0;
+                        if (Train != null)
+                        {
+                            float totalValue = 0;
+                            int helperCount = 0;
+                            
+                            foreach (var car in Train.Cars)
+                            {
+                                var helperLoco = car as MSTSDieselLocomotive;
+                                if (helperLoco != null && helperLoco.RemoteControlGroup != -1)
+                                {
+                                    if (car == Simulator.PlayerLocomotive && helperLoco.DieselEngines.Count > 1)
+                                    {
+                                        totalValue += helperLoco.DieselEngines[1].RealRPM;
+                                        helperCount++;
+                                    }
+                                    else if (car != Simulator.PlayerLocomotive)
+                                    {
+                                        totalValue += helperLoco.DieselEngines[0].RealRPM;
+                                        helperCount++;
+                                    }
+                                }
+                            }
+                            
+                            if (helperCount > 0)
+                                data = totalValue / helperCount;
+                        }
+                        break;
+
+                    case CABViewControlTypes.ORTS_HELPERS_DIESEL_TEMPERATURE:
+                        data = 0;
+                        if (Train != null)
+                        {
+                            float totalValue = 0;
+                            int helperCount = 0;
+                            
+                            foreach (var car in Train.Cars)
+                            {
+                                var helperLoco = car as MSTSDieselLocomotive;
+                                if (helperLoco != null && helperLoco.RemoteControlGroup != -1)
+                                {
+                                    if (car == Simulator.PlayerLocomotive && helperLoco.DieselEngines.Count > 1)
+                                    {
+                                        totalValue += helperLoco.DieselEngines[1].DieselTemperatureDeg;
+                                        helperCount++;
+                                    }
+                                    else if (car != Simulator.PlayerLocomotive)
+                                    {
+                                        totalValue += helperLoco.DieselEngines[0].DieselTemperatureDeg;
+                                        helperCount++;
+                                    }
+                                }
+                            }
+        
+                            if (helperCount > 0)
+                                data = totalValue / helperCount;
+                        }
+                        break;
+
+                    case CABViewControlTypes.ORTS_HELPERS_OIL_PRESSURE:
+                        data = 0;
+                        if (Train != null)
+                        {
+                            float totalValue = 0;
+                            int helperCount = 0;
+                            
+                            foreach (var car in Train.Cars)
+                            {
+                                var helperLoco = car as MSTSDieselLocomotive;
+                                if (helperLoco != null && helperLoco.RemoteControlGroup != -1)
+                                {
+                                    if (car == Simulator.PlayerLocomotive && helperLoco.DieselEngines.Count > 1)
+                                    {
+                                        totalValue += helperLoco.DieselEngines[1].DieselOilPressurePSI;
+                                        helperCount++;
+                                    }
+                                    else if (car != Simulator.PlayerLocomotive)
+                                    {
+                                        totalValue += helperLoco.DieselEngines[0].DieselOilPressurePSI;
+                                        helperCount++;
+                                    }
+                                }
+                            }
+                            
+                            if (helperCount > 0)
+                                data = totalValue / helperCount;
+                        }
+                        break;
+
                 case CABViewControlTypes.RPM:
                     {
                         var mstsDieselLocomotive = this as MSTSDieselLocomotive;

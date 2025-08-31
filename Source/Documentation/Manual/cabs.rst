@@ -361,6 +361,13 @@ Example::
                 )
 
 
+The same controls can be used for helper locomotives:
+
+- ``ORTS_HELPERS_DIESEL_ENGINE_STATE``
+
+- ``ORTS_HELPERS_DIESEL_ENGINE_STARTER``
+
+- ``ORTS_HELPERS_DIESEL_ENGINE_STOPPER``
 
 .. _cabs-cabradio:
 

@@ -2237,6 +2237,9 @@ namespace Orts.Viewer3D.RollingStock
                 case CABViewControlTypes.CAB_RADIO:
                 case CABViewControlTypes.ORTS_PLAYER_DIESEL_ENGINE:
                 case CABViewControlTypes.ORTS_HELPERS_DIESEL_ENGINES:
+                case CABViewControlTypes.ORTS_HELPERS_DIESEL_ENGINE_STATE:
+                case CABViewControlTypes.ORTS_HELPERS_DIESEL_ENGINE_STARTER:
+                case CABViewControlTypes.ORTS_HELPERS_DIESEL_ENGINE_STOPPER:
                 case CABViewControlTypes.ORTS_PLAYER_DIESEL_ENGINE_STATE:
                 case CABViewControlTypes.ORTS_PLAYER_DIESEL_ENGINE_STARTER:
                 case CABViewControlTypes.ORTS_PLAYER_DIESEL_ENGINE_STOPPER:
@@ -2576,6 +2579,48 @@ namespace Orts.Viewer3D.RollingStock
                             {
                                 if ((dieselLoco.DieselEngines[0].State == DieselEngineState.Running ||
                                             dieselLoco.DieselEngines[0].State == DieselEngineState.Stopped) &&
+                                            ChangedValue(1) == 0) new ToggleHelpersEngineCommand(Viewer.Log);
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                case CABViewControlTypes.ORTS_HELPERS_DIESEL_ENGINE_STARTER:
+                    foreach (var car in Locomotive.Train.Cars)
+                    {
+                        dieselLoco = car as MSTSDieselLocomotive;
+                        if (dieselLoco != null && dieselLoco.RemoteControlGroup != -1)
+                        {
+                            if (car == Viewer.Simulator.PlayerLocomotive && dieselLoco.DieselEngines.Count > 1)
+                            {
+                                if (dieselLoco.DieselEngines[1].State == DieselEngineState.Stopped &&
+                                            ChangedValue(1) == 0) new ToggleHelpersEngineCommand(Viewer.Log);
+                                break;
+                            }
+                            else if (car != Viewer.Simulator.PlayerLocomotive && dieselLoco.RemoteControlGroup >= 0)
+                            {
+                                if (dieselLoco.DieselEngines[0].State == DieselEngineState.Stopped &&
+                                            ChangedValue(1) == 0) new ToggleHelpersEngineCommand(Viewer.Log);
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                case CABViewControlTypes.ORTS_HELPERS_DIESEL_ENGINE_STOPPER:
+                    foreach (var car in Locomotive.Train.Cars)
+                    {
+                        dieselLoco = car as MSTSDieselLocomotive;
+                        if (dieselLoco != null && dieselLoco.RemoteControlGroup != -1)
+                        {
+                            if (car == Viewer.Simulator.PlayerLocomotive && dieselLoco.DieselEngines.Count > 1)
+                            {
+                                if (dieselLoco.DieselEngines[1].State == DieselEngineState.Running &&
+                                            ChangedValue(1) == 0) new ToggleHelpersEngineCommand(Viewer.Log);
+                                break;
+                            }
+                            else if (car != Viewer.Simulator.PlayerLocomotive && dieselLoco.RemoteControlGroup >= 0)
+                            {
+                                if (dieselLoco.DieselEngines[0].State == DieselEngineState.Running &&
                                             ChangedValue(1) == 0) new ToggleHelpersEngineCommand(Viewer.Log);
                                 break;
                             }

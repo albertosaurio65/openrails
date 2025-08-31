@@ -6024,6 +6024,77 @@ namespace Orts.Simulation.RollingStocks
                         }
                         break;
                     }
+                case CABViewControlTypes.ORTS_HELPERS_DIESEL_ENGINE_STATE:
+                {
+                    foreach (var car in Train.Cars)
+                    {
+                        var dieselLoco = car as MSTSDieselLocomotive;
+                        if (dieselLoco != null && dieselLoco.RemoteControlGroup != -1)
+                        {
+                            if (car == Simulator.PlayerLocomotive && dieselLoco.DieselEngines.Count > 1)
+                           {
+                                // Para locomotora del jugador con múltiples motores (segundo motor)
+                                data = (int)dieselLoco.DieselEngines[1].State;
+                                break;
+                            }
+                            else if (car != Simulator.PlayerLocomotive)
+                            {
+                                // Para helpers (primera locomotora diesel no jugador)
+                                data = (int)dieselLoco.DieselEngines[0].State;
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+
+                case CABViewControlTypes.ORTS_HELPERS_DIESEL_ENGINE_STARTER:
+                {
+                    foreach (var car in Train.Cars)
+                    {
+                        var dieselLoco = car as MSTSDieselLocomotive;
+                        if (dieselLoco != null && dieselLoco.RemoteControlGroup != -1)
+                        {
+                            if (car == Simulator.PlayerLocomotive && dieselLoco.DieselEngines.Count > 1)
+                            {
+                                // Para locomotora del jugador con múltiples motores (segundo motor)
+                                data = dieselLoco.DieselEngines[1].State == DieselEngineState.Starting ? 1 : 0;
+                                break;
+                            }
+                            else if (car != Simulator.PlayerLocomotive)
+                            {
+                                // Para helpers (primera locomotora diesel no jugador)
+                               data = dieselLoco.DieselEngines[0].State == DieselEngineState.Starting ? 1 : 0;
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+
+                case CABViewControlTypes.ORTS_HELPERS_DIESEL_ENGINE_STOPPER:
+                {
+                    foreach (var car in Train.Cars)
+                    {
+                        var dieselLoco = car as MSTSDieselLocomotive;
+                        if (dieselLoco != null && dieselLoco.RemoteControlGroup != -1)
+                        {
+                            if (car == Simulator.PlayerLocomotive && dieselLoco.DieselEngines.Count > 1)
+                            {
+                                // Para locomotora del jugador con múltiples motores (segundo motor)
+                data = dieselLoco.DieselEngines[1].State == DieselEngineState.Stopping ? 1 : 0;
+                                break;
+                            }
+                            else if (car != Simulator.PlayerLocomotive)
+                            {
+                                // Para helpers (primera locomotora diesel no jugador)
+                                data = dieselLoco.DieselEngines[0].State == DieselEngineState.Stopping ? 1 : 0;
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
                 case CABViewControlTypes.ORTS_PLAYER_DIESEL_ENGINE_STATE:
                     {
                         data = 0;
